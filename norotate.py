@@ -21,8 +21,12 @@
 #               Jan 30, 2013: Forked from the twod.py runtime, to execute
 #                             specific scenarios
 #
-# Purpose:      Provide a function to evaluate the stability of a 
-#               gravitationally bound BEC under varying trap strengths
+#           --->norotate.py
+#               Jun 08, 2013: Moved to a new directory and renamed, to
+#                             keep projects separate
+#
+# Purpose:      Provide the functions to timestep the BEC through various 
+#               scenarios
 #               
 ################################################################################
 

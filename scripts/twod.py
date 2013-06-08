@@ -20,7 +20,9 @@
 #               Jan 30, 2013: Saving functionality REMOVED!
 #                             NOW ONLY CONTAINS BOSE CLASS AND RELATED FUNCTIONS
 #
-#               Jun 08, 2013: 
+#               Jun 08, 2013: Minor improvements to structure and comments
+#                             New directory created dedicated to non rotating
+#                             condensate
 #               
 #
 # Purpose:      Provide a class to evaluate the stability of a 
