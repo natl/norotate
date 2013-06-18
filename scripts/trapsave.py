@@ -18,6 +18,12 @@
 #                             This allows for run paramaters to be added and
 #                             removed.
 #
+#               Feb 04, 2013: Trying to fix dbconvert, replacing all instances
+#                             of dict.iteritems()/h5py.class.iteritems() with
+#                             the items() method, for Python 3 compatability
+#
+#               Feb 11, 2013: Removed microseconds from filenames
+#
 # Purpose:      Contain functions that do most of the hdf5 file handling used
 #               in routines
 #               
@@ -42,37 +48,18 @@ def autof(h              ,
   headers are specified by h
   '''
   t = dt.datetime.today()
-  filename = (folder + "/run%s.hdf5" % t.isoformat(), 'r+' ) 
+  t = t - dt.timedelta( microseconds = t.microsecond )
+  filename = folder + "/run%s.hdf5" % t.isoformat()
   
-  db = h5py.File( folder + "db.hdf5" )
-  fn = db.create_group( t.isoformat )  
-  for entry in h:
-    fn.create_dataset( entry, h[entry] )
+  db = h5py.File( folder + "/db.hdf5", 'a' )
+  run = db.create_group( t.isoformat() )  
+  for entry, value in h.items():
+    run.attrs[entry] = value 
+    print entry, value
   
   return filename
   
-########################################################################
-
-def createh5( name          ,
-              erase = False ):
-  '''
-  Open a hdf5 file, checking that nothing is accidentally overwritten
-  '''
-  if erase == False:
-    #open file, check if we can overwrite previous files
-    try:
-        f = h5py.File( name, 'w-' )
-    except:
-      print 'File exists already'
-      print 'add kwarg erase = True to overwrite'
-      return SystemError('Aborting so you do not lose precious data')
-      
-  #Overwrite existing file if erase = True
-  elif erase == True: f = h5py.File( name, 'w' )
-    
-  return f
-  
-########################################################################
+################################################################################
 
 def readh5( name ):
   '''
@@ -81,15 +68,15 @@ def readh5( name ):
   try:
     f = h5py.File( str(name) , 'r')
   except:
-    print "It seems the file you tried to open doesn't exist."
-    print "sorry about that :("
+    raise IOError( "It seems the file you tried to open doesn't exist.\
+                         \nsorry about that :(" )
   
   headers = dict()
   
   print "Succesfully opened" + str(name)
   print "File headers are as follows"
   
-  for name, value in f.attrs.iteritems():
+  for name, value in f.attrs.items():
     print name+":", value
     headers[ name ] = value
   
@@ -97,7 +84,7 @@ def readh5( name ):
   
   return f, headers
   
-########################################################################
+################################################################################
   
 def fileinfo(filename):
   '''
@@ -109,7 +96,7 @@ def fileinfo(filename):
   infile.f.close()
   print str(filename) + ' closed'
   
-########################################################################
+################################################################################
   
 class h5file:
   '''
@@ -129,11 +116,13 @@ class h5file:
                 filename    ,    #filepath to open
                 erase       ,    #overwrite existing file?
                 read = False ):  #reading in a file instead? Then True
-    self.name   = filename
-    self.erase  = erase
     
-    if read == False: 
-      self.f = createh5( self.name, erase = erase )
+    self.filename = filename
+    self.erase    = erase
+    print filename
+    if read == False:
+      if self.erase == True : self.f = h5py.File( self.filename, 'w'  )
+      if self.erase == False: self.f = h5py.File( self.filename, 'w-' )
     elif read == True: self.f, self.head = readh5( filename )
   
   def add_data(self, runname, xdata, ydata, psi, time):
@@ -146,14 +135,14 @@ class h5file:
     psi   = grp.create_dataset( 'psi'  , data = psi   )
     
     
-  def add_headers(self, head_dict):
+  def add_headers(self, h):
     '''
     Add headers to the main file, to explain relevant parameters
     SYNTAX: h5file.add_headers(head_dict):
     head_dict should be a dictionary
     '''
-    
-    for name, value in head_dict.iteritems():
+    print self.f.name
+    for name, value in h.iteritems():
       self.f.attrs[ str( name ) ] = value
   
   def readxy(self):
@@ -184,29 +173,28 @@ def dbconvert( infilename, outfilename ):
   db = h5py.File( infilename, 'r' )
   txt = file( outfilename, 'w' )
   
-  timegroups = [ a[ time[0] ] for time in a.items() ]
+  timegroups = [ db[ time[0] ] for time in db.items() ]
   
-  keylists = [ timekeys.items() for timekeys in timegroups ] #list all the keys
+  keylists = [ timekeys.attrs.keys() for timekeys in timegroups ] #list all the keys
   
-  keys = [str( item[0] ) for sublist in keylists for item in sublist]
+  keys = [str( item ) for sublist in keylists for item in sublist]
                 #flatten the keylist
   ukeys = list( set(keys) ) #unique keys
   ukeys.sort()
-  
   ukeys.remove( 'g' ); ukeys.remove( 'G' )
   ukeys.insert( 0, 'g' ); ukeys.insert( 0, 'G' ); ukeys.insert( 0, 'filename' )
   
-  txt.write(','.join( ukeys ) ) #write headings
+  txt.write(','.join( map( str, ukeys ) ) + '\n' ) #write headings
   
   for group in timegroups:
-    gp = db[ group ]
-    vals = [ group ] #first line is date
+    gp = db[ group.name ]
+    vals = [ str( group.name[1:] ) ] #first line is date
     for key in ukeys:
       try:
-        vals.append( gp[key].value )
+        vals.append( gp.attrs[key] )
       except:
-        vals.append( '-' )
-    txt.write(','.join( vals ) ) #write data
-      
+        if key != 'filename':vals.append( '-' )
+    txt.write(','.join( map( str, vals ) ) + '\n') #write data
+
   db.close()
   txt.close()

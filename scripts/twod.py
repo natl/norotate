@@ -236,29 +236,26 @@ class Bose:
     '''
     
     
-    Ev = sum( sum( self.psi.conjugate() * self.V * self.psi )
-            ) * self.dx * self.dy
+    Ev = sum(sum(self.psi.conjugate()*self.V*self.psi))*self.dx*self.dy
     
-    Ei = sum( sum( self.psi.conjugate() * 0.5 * self.g * abs(self.psi) **2. *
-                   self.psi ) ) * self.dx * self.dy
+    Ei = sum(sum(self.psi.conjugate()*0.5*self.g*abs(self.psi)**2.*self.psi)
+      )*self.dx*self.dy
     
-    Eg = sum( sum( self.psi.conjugate() * -1. * self.gravity() * self.psi )
-            ) * self.dx * self.dy
+    Eg = sum(sum(self.psi.conjugate()*-1.*self.gravity()*self.psi)
+      )*self.dx*self.dy
     
-    Ekin = sum( 
-               sum(
-        self.psi.conjugate() * ff.fftshift( ff.ifft2( 0.5 * self.ksquare * 
-                                            ff.fft2( ff.fftshift( self.psi ) ) ) 
-                                          )
-                   )
-              ) * self.dx * self.dy
+    Ekin = sum(sum(self.psi.conjugate()*ff.fftshift(ff.ifft2(0.5*self.ksquare* 
+      ff.fft2(ff.fftshift(self.psi))))))*self.dx*self.dy
     
-    enList = [ Ev, Ei, Eg, Ekin ]
+    enList = [Ev, Ei, Eg, Ekin]
     
     
     
     if verbose == True: #print out the energies
-      #Calculate gravitational field Laplacian
+      
+      '''
+      NOTE: THIS METHOD OF CALCULATING THE GF LAPLACIAN IS FLAWED 
+      Calculate gravitational field Laplacian
       gf = -1. * self.gravity() #self.gravity() is +ve
       glpg = ( np.roll( gf, 1, axis = 0 )
              + np.roll( gf,-1, axis = 0 )
@@ -266,7 +263,7 @@ class Bose:
              + np.roll( gf,-1, axis = 1 )
              - 4 * gf ) / self.dx ** 2.
       glpd = 2. * np.pi * self.G * abs(self.psi) ** 2.
-      
+      print sum(sum(glpg)),sum(sum(glpd))
       ##diagnostic plots
       #gravfig = plt.figure()
       #gravax = gravfig.add_subplot(111)
@@ -274,6 +271,7 @@ class Bose:
       #gravax.plot(self.x, glpd[ self.npt//2, : ], label = 'Density Laplace' )
       #gravlgd = plt.legend(loc='upper right')
       #plt.show()
+      '''
       
       print 'Harmonic PE         = ', np.real( enList[0] )
       print 'Interaction PE      = ', np.real( enList[1] )
@@ -287,7 +285,8 @@ class Bose:
                                                2 * enList[1] + enList[2] )
       print 'Ek - Ev + Ei - G/4  = ', np.real( enList[3] - enList[0] + enList[1]
                                              - self.G/4. )
-      print 'Laplace Eq check    = ', np.real( sum( sum( glpg - glpd ) ) )
+      #print 'Laplace Eq check    = ', np.real( sum( sum( glpg - glpd ) ) )
+      print '#'*80
     return enList
   #-----------------------------------------------------------------------------
   
@@ -363,7 +362,7 @@ class Bose:
       
       if verbose == True:
         #diagnostic energies
-        gtfwf = np.sqrt( gtfsol )
+        gtfwf = np.sqrt( gtfsol ) #grav TF wave function
         
         Ev = 0.
         
@@ -391,8 +390,7 @@ class Bose:
                       #+ np.roll( GField,-1, axis = 1 )
                       #- 4 * GField ) / self.dx ** 2.
         #glpd = 2 * np.pi * self.G * gtfsol 
-        
-        print '\nTF solution Energies\n'
+        print '\n'+'#'*80+'\nTF solution Energies\n'+'-'*80
         print 'Harmonic PE         = ', np.real( TFList[0] )
         print 'Interaction PE      = ', np.real( TFList[1] )
         print 'Gravitational PE    = ', np.real( TFList[2] )
@@ -403,6 +401,7 @@ class Bose:
                                                 2 * TFList[1] + TFList[2] )
         print 'Ek - Ev + Ei - G/4  = ', np.real( TFList[3] - TFList[0] +
                                                   TFList[1] - self.G / 4. )
+        print '#'*80
         
         #diagnostic plots
         fineXS = fineX * scaling

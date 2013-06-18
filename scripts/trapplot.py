@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib.cm as cm
 
-from scripts.traphdf5 import *
+from scripts.trapsave import *
 
 
 def nicecmap():
