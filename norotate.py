@@ -24,6 +24,8 @@
 #           --->norotate.py
 #               Jun 08, 2013: Moved to a new directory and renamed, to
 #                             keep projects separate
+#               Jul 08, 2013: Added a new function, loadbec to load and
+#                             continue a previous simulation
 #
 # Purpose:      Provide the functions to timestep the BEC through various 
 #               scenarios
@@ -577,7 +579,111 @@ def onebec( a                      ,  #min co-ord
   bec.TFError( verbose = True )
   return None
   
-#def phasediagram():
+###############################################################################
+###############################################################################
+###############################################################################
+def loadbec( loadfile               ,  #filename to load
+             dt                     ,  #timestep
+             tstop                  ,  #time to stop
+             g                      ,  #s-wave scattering strength
+             G                      ,  #gravitational field scaled strength
+             filename = autof       ,  #output filename, autof for automatic naming
+             P        = 0.          ,  #optional harmonic potential
+             skip     = 1.          ,  #intervals to skip when saving
+             erase    = False       ,  #overwrite existing files True/False
+             wick     = False       ,  #wick rotation
+             **kwargs                ):
+  '''
+  Initial state will be loaded from an old file
+  save the result of a gravitational simulation of a BEC
+  saved file is a hd5 database
+  loadhdf5 is from scripts/initials
+  SYNTAX:
+  def loadbec( loadfile               ,  #filename to load
+               dt                     ,  #timestep
+               tstop                  ,  #time to stop
+               g                      ,  #s-wave scattering strength
+               G                      ,  #gravitational field scaled strength
+               filename = autof       ,  #output filename, autof for automatic naming
+               P        = 0.          ,  #optional harmonic potential
+               skip     = 1.          ,  #intervals to skip when saving
+               erase    = False       ,  #overwrite existing files True/False
+               wick     = False       ,  #wick rotation
+               **kwargs                ):
+             
+  **kwargs include
+  t='last': (type string)  This sets the frame to begin in the loadfile. 
+                           Defaults to the last frame with 'last'
+  '''
+  #initial setup ---------------------------------------------------------------
+  
+  xvals,yvals,startpsi = loadhdf5('loadfile')
+  a = xvals[0]
+  npt = len(xvals)
+  b = xvals[npt-1]
+  #Prepare parameters for database
+  h = dict( {'G'        : G                    ,
+             'g'        : g                    ,
+             'P'        : P                    ,
+             'dt'       : dt                   ,
+             'tstop'    : tstop                ,
+             'xmin'     : a                    ,
+             'xmax'     : b                    ,
+             'wick'     : wick                 ,
+             'npt'      : npt                  ,
+             'skipstep' : skip                 ,
+             'loadfile' : loadfile             ,
+             'steps'    : (tstop // dt) // skip} )
+  h = dict( h.items() + kwargs.items() ) #merge the dictionaries
+  if filename == autof: #automatically add run to database, and name file
+    filename = autof(h, folder = 'load_prev')
+  else: #custom filename
+    if type(filename) != str: return SystemError('Filename should be a string')
+  
+  #Make a condensate
+  bec = Bose(a,b,int(npt),g,G,P,dt,init=(lambda *args,**kwargs:startpsi))
+  t = 0
+  
+  infile = h5file( filename, erase = erase, read = False )
+  infile.add_headers( h )
+  infile.add_data( str('0.0'), bec.x, bec.y, bec.psi, t )
+  
+
+  if wick == True: bec.wickon()
+  if wick == False: bec.wickoff()
+  savecounter = 0.
+  saves       = 0.
+  bec.energies( verbose = True )
+  
+  
+  
+################################################################################
+# Then iterate until happy!
+################################################################################
+  # time-evolution------------------------------------------------------------
+  for t in np.arange( 0, tstop, dt ):
+    bec.psi = bec.step4()
+    savecounter += 1.
+    
+    if savecounter == skip: #save the data
+      infile.add_data(str( saves + 1.), bec.x, bec.y, bec.psi, t)
+      savecounter = 0.
+      saves += 1.
+      print t
+    
+    if wick == True:
+          bec.psi = bec.psi / np.sqrt( sum( sum ( abs( bec.psi ) ** 2. ) )
+             * bec.dx * bec.dy )
+  bec.energies( verbose = True )
+  print 'Run saved to ' + filename
+  print 'Parameters added to sims/runs.info'
+  print 'Have a nice day :)'
+  infile.f.close()
+  bec.TFError( verbose = True )
+  return None
+  
+  
+  #def phasediagram():
   #'''
   #A static function currently to produce a 'phase diagram' of stability
   #'''

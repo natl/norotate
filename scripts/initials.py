@@ -7,6 +7,7 @@
 # Created:      December 4, 2012
 #
 # Changelog:    December 4, 2012: Created from twodtrap.py
+#               June 08, 2013:    Added a function to load old scenarios
 #           
 #               
 #
@@ -23,6 +24,7 @@ import matplotlib.pyplot as plt
 from numpy.linalg import det
 from scipy.special import j0, j1, jn_zeros
 from numpy.random import randn
+from traphdf5 import *
 
 def gravground( x          ,
                 y          ,
@@ -221,4 +223,28 @@ def vortexgauss( x                 ,  #xvals
   print '<twod.vortexgauss> completed'
   
   return wave
+  
+def loadhdf5(filename, t='last'):
+  '''
+  Usage: loadhdf5(filename, t='last'):
+  filename: file to load wavefunction from
+  t=frame time to load within file (defaults to last time available)
+  
+  This function loads a particular wavefunction from a saved HDF5 file to 
+  iterate over.
+  It works well with the usefile scenario in norotate.py
+  '''
+  datafile = h5file(filename, erase=False, read=True)
+  groups = filename.items() #get the list of groups
+  
+  if t == 'last':
+    groups.reverse() #reverse the list
+    t = groups[0][1] #get the last group
+  
+  assert t in zip(*groups)[0], 't is invalid'
+  group = filename['t']
+  xvals, yvals = datafile.readxy()
+  psi = datafile.readpsi(t)
+  return xvals, yvals, psi
+  
   
