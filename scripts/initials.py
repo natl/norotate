@@ -18,6 +18,7 @@
 #Imports
 from __future__ import division
 
+import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -232,19 +233,22 @@ def loadhdf5(filename, t='last'):
   
   This function loads a particular wavefunction from a saved HDF5 file to 
   iterate over.
-  It works well with the usefile scenario in norotate.py
+  It works well with the loadbec scenario in norotate.py
   '''
-  datafile = h5file(filename, erase=False, read=True)
-  groups = filename.items() #get the list of groups
+  datafile = h5py.File(filename, 'r')
+  groupNames,groupItems = zip(*datafile.items()) #get the list of groups
   
   if t == 'last':
-    groups.reverse() #reverse the list
-    t = groups[0][1] #get the last group
-  
-  assert t in zip(*groups)[0], 't is invalid'
-  group = filename['t']
-  xvals, yvals = datafile.readxy()
-  psi = datafile.readpsi(t)
+    groupNamesFloat = map(float,groupNames)
+    groupNamesFloat.sort(reverse=True)
+    t = str(groupNamesFloat[0]) #get the last group
+  print t, type(t)
+  assert type(t) == str or type(t) == unicode, 't should be string/unicode'
+  assert t in groupNames, 't is invalid'
+  group = datafile[t]
+  xvals = group['xvals']
+  yvals = group['yvals']
+  psi = group['psi']
   return xvals, yvals, psi
   
   

@@ -617,7 +617,7 @@ def loadbec( loadfile               ,  #filename to load
   '''
   #initial setup ---------------------------------------------------------------
   
-  xvals,yvals,startpsi = loadhdf5('loadfile')
+  xvals,yvals,startpsi = loadhdf5(loadfile)
   a = xvals[0]
   npt = len(xvals)
   b = xvals[npt-1]
@@ -640,8 +640,9 @@ def loadbec( loadfile               ,  #filename to load
   else: #custom filename
     if type(filename) != str: return SystemError('Filename should be a string')
   
+  def loadpsi(start=startpsi, *args, **kwargs): return np.array(startpsi)
   #Make a condensate
-  bec = Bose(a,b,int(npt),g,G,P,dt,init=(lambda *args,**kwargs:startpsi))
+  bec = Bose(a,b,int(npt),loadpsi,g,G,P,dt,)
   t = 0
   
   infile = h5file( filename, erase = erase, read = False )
@@ -679,7 +680,7 @@ def loadbec( loadfile               ,  #filename to load
   print 'Parameters added to sims/runs.info'
   print 'Have a nice day :)'
   infile.f.close()
-  bec.TFError( verbose = True )
+  if wick == True: bec.TFError( verbose = True )
   return None
   
   
